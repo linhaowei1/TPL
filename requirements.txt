@@ -1,0 +1,9 @@
+torchvision==0.8.0
+transformers==4.11.3
+scikit-learn
+accelerate==0.5.1
+datasets
+tensorboard
+jsonlines
+timm==0.4.12
+ftfy
