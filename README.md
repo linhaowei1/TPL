@@ -1,6 +1,6 @@
 # Class Incremental Learning via Likelihood Ratio Based Task Prediction
 
-This repository contains the code for our paper [Class Incremental Learning via Likelihood Ratio Based Task Prediction](https://github.com/linhaowei1/TPLR#) by [Haowei Lin](https://linhaowei1.github.io/), [Yijia Shao](https://shaoyijia.github.io/), Weinan Qian, Ningxin Pan, Yiduo Guo, and [Bing Liu](https://www.cs.uic.edu/~liub/).
+This repository contains the code for our paper [Class Incremental Learning via Likelihood Ratio Based Task Prediction](https://arxiv.org/abs/2309.15048)) by [Haowei Lin](https://linhaowei1.github.io/), [Yijia Shao](https://shaoyijia.github.io/), Weinan Qian, Ningxin Pan, Yiduo Guo, and [Bing Liu](https://www.cs.uic.edu/~liub/).
 
 ## Quick Links
 
@@ -85,9 +85,12 @@ We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an
 Please cite our paper if you use this code or part of it in your work:
 
 ```bibtex
-@inproceedings{lin2023class,
-   title={Class Incremental Learning via Likelihood Ratio Based Task Prediction},
-   author={Lin, Haowei and Shao, Yijia and Qian, Weinan and Pan, Ningxin and Guo, Yiduo and Liu, Bing},
-   year={2023}
+@misc{lin2023class,
+      title={Class Incremental Learning via Likelihood Ratio Based Task Prediction}, 
+      author={Haowei Lin and Yijia Shao and Weinan Qian and Ningxin Pan and Yiduo Guo and Bing Liu},
+      year={2023},
+      eprint={2309.15048},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
 }
 ```
