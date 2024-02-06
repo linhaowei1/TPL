@@ -1,5 +1,5 @@
 seed=(2023 111 222 333 444 555 666 777 888 999)
-cuda_id=4
+cuda_id=7
 ve="vit_base_patch16_clip_224.openai"
 bs=('vit_base_patch16_clip_224.openai_C10_5T_hat' 'vit_base_patch16_clip_224.openai_C100_10T_hat' 'vit_base_patch16_clip_224.openai_C100_20T_hat' 'vit_base_patch16_clip_224.openai_T_5T_hat' 'vit_base_patch16_clip_224.openai_T_10T_hat')
 seqfile=('C10_5T' 'C100_10T' 'C100_20T' 'T_5T' 'T_10T')

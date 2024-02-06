@@ -180,15 +180,15 @@ def load_in661_pretrain(args, target_model):
 def lookfor_model(args):
 
     ## load visual encoder ##
-    if 'deit_small_patch16_224' in args.visual_encoder:
+    if 'deit_small_patch16' in args.visual_encoder:
         from networks.vit_hat import deit_small_patch16_224
         model = deit_small_patch16_224(pretrained=False, num_classes=args.class_num *
                                     args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
-    elif 'vit_small_patch16_224' in args.visual_encoder:
+    elif 'vit_small_patch16' in args.visual_encoder:
         from networks.vit_hat import vit_small_patch16_224
         model = vit_small_patch16_224(pretrained=False, num_classes=args.class_num *
                                     args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
-    elif 'vit_base_patch16_224' in args.visual_encoder:
+    elif 'vit_base_patch16' in args.visual_encoder:
         from networks.vit_hat import vit_base_patch16_224
         model = vit_base_patch16_224(pretrained=False, num_classes=args.class_num *
                                     args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)

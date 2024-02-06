@@ -1,5 +1,5 @@
 seed=(2023 111 222 333 444 555 666 777 888 999)
-cuda_id=3
+cuda_id=1
 ve="deit_small_patch16_224"
 bs=('deit_small_patch16_224_C10_5T_hat' 'deit_small_patch16_224_C100_10T_hat' 'deit_small_patch16_224_C100_20T_hat' 'deit_small_patch16_224_T_5T_hat' 'deit_small_patch16_224_T_10T_hat')
 seqfile=('C10_5T' 'C100_10T' 'C100_20T' 'T_5T' 'T_10T')
