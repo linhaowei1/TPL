@@ -206,30 +206,36 @@ class Attention(nn.Module):
         return x
 
 class Adapter(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, hat=False):
         super().__init__()
         self.in_dim, self.out_dim = in_dim, out_dim
         self.fc1 = nn.Linear(in_dim, out_dim)
         self.fc2 = nn.Linear(out_dim, in_dim)
         self.relu = nn.ReLU()
 
-        self.gate = torch.sigmoid
-
-        self.ec1 = nn.ParameterList()
-        self.ec2 = nn.ParameterList()
-
+        if hat:
+            self.gate = torch.sigmoid
+            self.ec1 = nn.ParameterList()
+            self.ec2 = nn.ParameterList()
+        
+        self.hat = hat
         self.init_weights()
 
-    def forward(self, t, x, msk, s):
-        masks = self.mask(t, s=s)
-        gc1, gc2 = masks
+    def forward(self, x, t=None, msk=None, s=None):
+        if self.hat:
+            masks = self.mask(t, s=s)
+            gc1, gc2 = masks
 
-        msk.append(masks)
+            msk.append(masks)
 
-        h = self.relu(self.mask_out(self.fc1(x), gc1))
-        h = self.mask_out(self.fc2(h), gc2)
-        return x + h, msk
-
+            h = self.relu(self.mask_out(self.fc1(x), gc1))
+            h = self.mask_out(self.fc2(h), gc2)
+            return x + h, msk
+        else:
+            h = self.relu(self.fc1(x))
+            h = self.fc2(h)
+            return x + h
+        
     def init_weights(self):
         for n, p in self.named_parameters():
             p.data = p * 0 + 1e-24 / p.size(0)
@@ -250,38 +256,44 @@ class Adapter(nn.Module):
 class Block(nn.Module):
 
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, drop=0., attn_drop=0.,
-                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, latent=None):
+                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, latent=None, hat=False):
         super().__init__()
         self.norm1 = norm_layer(dim)
-        self.list_norm1 = nn.ModuleList()
+        self.list_norm1 = nn.ModuleList() if hat else None
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.norm2 = norm_layer(dim)
-        self.list_norm2 = nn.ModuleList()
+        self.list_norm2 = nn.ModuleList() if hat else None
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-        self.adapter1 = Adapter(dim, latent)
-        self.adapter2 = Adapter(dim, latent)
+        self.hat = hat
+        self.adapter1 = Adapter(dim, latent, hat=hat)
+        self.adapter2 = Adapter(dim, latent, hat=hat)
 
-    def forward(self, t, x, msk, s):
-        h, msk = self.adapter1(
-            t,
-            self.drop_path(self.attn(self.list_norm1[t](x))),
-            msk,
-            s
-            )
-        x = x + h
+    def forward(self, x, t=None, msk=None, s=None):
+        if self.hat:
+            h, msk = self.adapter1(
+                self.drop_path(self.attn(self.list_norm1[t](x))),
+                t,
+                msk,
+                s
+                )
+            x = x + h
 
-        h, msk = self.adapter2(
-            t,
-            self.drop_path(self.mlp(self.list_norm2[t](x))),
-            msk,
-            s
-            )
-        x = x + h
-        return t, x, msk, s
+            h, msk = self.adapter2(
+                self.drop_path(self.mlp(self.list_norm2[t](x))),
+                t,
+                msk,
+                s
+                )
+            x = x + h
+            return x, t, msk, s
+        else:
+            x = self.adapter1(self.drop_path(self.attn(self.norm1(x)))) + x
+            x = self.adapter2(self.drop_path(self.mlp(self.norm2(x)))) + x
+            return x
 
 class MyVisionTransformer(nn.Module):
     """ Vision Transformer
@@ -295,7 +307,7 @@ class MyVisionTransformer(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=True, representation_size=None, distilled=False,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=None,
-                 act_layer=None, weight_init='', latent=None, args=None):
+                 act_layer=None, weight_init='', latent=None, args=None, hat=False):
         """
         Args:
             img_size (int, tuple): input image size
@@ -338,10 +350,10 @@ class MyVisionTransformer(nn.Module):
         self.blocks = mySequential(*[
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
-                attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=self.norm_layer, act_layer=act_layer, latent=latent)
+                attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=self.norm_layer, act_layer=act_layer, latent=latent, hat=hat)
             for i in range(depth)])
         self.norm = self.norm_layer(embed_dim)
-        self.list_norm = nn.ModuleList()
+        self.list_norm = nn.ModuleList() if hat else None
 
         # Representation layer
         if representation_size and not distilled:
@@ -354,7 +366,7 @@ class MyVisionTransformer(nn.Module):
             self.pre_logits = nn.Identity()
 
         # Classifier head(s)
-        self.head = nn.ModuleList()
+        self.head = nn.ModuleList() if hat else nn.Linear(self.embed_dim, self.num_classes)
         self.head_dist = None
         if distilled:
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
@@ -400,7 +412,7 @@ class MyVisionTransformer(nn.Module):
         if self.num_tokens == 2:
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
-    def forward_features(self, t, x, s):
+    def forward_features(self, x, t=None, s=None):
         msk = []
         x = self.patch_embed(x)
         cls_token = self.cls_token.expand(x.shape[0], -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
@@ -410,43 +422,34 @@ class MyVisionTransformer(nn.Module):
         else:
             x = torch.cat((cls_token, self.dist_token.expand(x.shape[0], -1, -1), x), dim=1)
         x = self.pos_drop(x + self.pos_embed)
-        _, x, msk, _ = self.blocks(t, x, msk, s)
-        x = self.list_norm[t](x)
-        if self.dist_token is None:
+
+        if t is not None:
+            x, _, msk, _ = self.blocks(x, t, msk, s)
+            x = self.list_norm[t](x)
             return self.pre_logits(x[:, 0]), list(itertools.chain(*msk))
         else:
-            raise NotImplementedError("dist_token is not implemented")
-            return x[:, 0], x[:, 1]
+            x = self.norm(self.blocks(x))
+            return self.pre_logits(x[:, 0])
 
-    def forward(self, t, x, s):
-        x, msk = self.forward_features(t, x, s=s)
-        if self.head_dist is not None:
-            raise NotImplementedError("head_dist is not implemented")
-            x, x_dist = self.head(x[0]), self.head_dist(x[1])  # x must be a tuple
-            if self.training and not torch.jit.is_scripting():
-                # during inference, return the average of both classifier predictions
-                return x, x_dist
-            else:
-                return (x + x_dist) / 2
-        else:
-            x = self.head[t](x)
-        return x, msk
 
-    def forward_classifier(self, t, x):
-        if self.head_dist is not None:
-            raise NotImplementedError("head_dist is not implemented")
-            x, x_dist = self.head(x[0]), self.head_dist(x[1])  # x must be a tuple
-            if self.training and not torch.jit.is_scripting():
-                return x, x_dist
-            else:
-                return (x + x_dist) / 2
-        else:
+    def forward(self, x, t=None, s=None):
+        if s is not None:
+            x, msk = self.forward_features(x, t=t, s=s)
             x = self.head[t](x)
-        return x
+            return x, msk
+        else:
+            x = self.forward_features(x)
+            return self.head(x)
+
+    def forward_classifier(self, x, t=None):
+        if t is not None:
+            return self.head[t](x)
+        else:
+            return self.head(x)
 
     def append_embeddings(self):
         # append head
-        self.head.append(nn.Linear(self.embed_dim, self.num_classes).cuda())
+        self.head.append(nn.Linear(self.embed_dim, self.num_classes))
 
         self.list_norm.append(deepcopy(self.norm))
         for b in self.blocks:
@@ -456,18 +459,11 @@ class MyVisionTransformer(nn.Module):
             b.list_norm1.append(deepcopy(b.norm1))
             b.list_norm2.append(deepcopy(b.norm2))
 
-    def last_layer_adapter_parameters(self):
-        print([n for n, p in self.named_parameters() if (('adapter.fc' in n or 'list_norm' in n) and 'blocks.11' in n) or 'head' in n])
-        return [p for n, p in self.named_parameters() if (('adapter.fc' in n or 'list_norm' in n) and 'blocks.11' in n) or 'head' in n]
-
     def head_parameters(self):
         return [p for n, p in self.named_parameters() if 'head' in n]
         
     def adapter_parameters(self):
-        if self.freeze_head:
-            return [p for n, p in self.named_parameters() if 'adapter' in n or 'list_norm' in n]
-        else:
-            return [p for n, p in self.named_parameters() if 'adapter' in n or 'list_norm' in n or 'head' in n]
+        return [p for n, p in self.named_parameters() if 'adapter' in n or 'list_norm' in n or 'head' in n]
 
 class ViTFrozenHead(MyVisionTransformer):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,

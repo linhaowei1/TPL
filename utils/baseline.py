@@ -1,20 +1,8 @@
-import os
 import numpy as np
-import scipy
 import torch
-import sklearn.covariance
-from sklearn import metrics
 import json
-import scipy.spatial.distance as spd
-from scipy.special import logsumexp
-from numpy.linalg import norm, pinv
-import faiss
-#import libmr
-from sklearn.metrics import pairwise_distances_argmin_min
 import torch.nn.functional as F
-from tqdm.auto import tqdm
-from torch.utils.tensorboard import SummaryWriter
-from utils import utils, hypothesis_test
+from utils import utils
 import torch.nn as nn
 
 
@@ -23,7 +11,6 @@ def mds(args, test_logits, test_hidden, loader, task_mask):
     test_samples = torch.Tensor(test_hidden)
     score_in = utils.maha_score(args, test_samples, args.precision_list, args.feat_mean_list, task_mask)
     return score_in
-
 
 @torch.no_grad()
 def mls(args, test_logits, test_hidden, loader, task_mask):
@@ -37,9 +24,6 @@ def calculate_mask(self, w):
     self.masked_w = w * mask
 
 def TPLR(args, test_logits, test_hidden, loader, task_mask):
-
-    metric = {}
-    tp_softmax = None
 
     logit_score = torch.tensor(test_logits)
     logit_score = torch.max(logit_score, dim=1)[0]

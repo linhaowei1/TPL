@@ -12,21 +12,7 @@ import math
 import torch
 import PIL
 
-
-def get_MNIST_transform(args):
-
-    TRANSFORM = transforms.Compose(
-        [
-            transforms.Resize(size=248, interpolation=PIL.Image.BICUBIC),
-            transforms.CenterCrop(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
-            transforms.Normalize(mean=torch.tensor([0.4850, 0.4560, 0.4060]),
-                                 std=torch.tensor([0.2290, 0.2240, 0.2250])),
-        ]
-    )
-    return TRANSFORM, TRANSFORM
-
+DATA_PATH = './data'
 
 def get_transform(args):
 
@@ -45,7 +31,6 @@ def get_dataset(args):
     dataset_name = random_sep[0]
 
     if 'C10-5T' in dataset_name:
-        DATA_PATH = '~/data'
         args.total_class = 10
         args.class_num = int(args.total_class / args.ntasks)
         args.mean = (0.4914, 0.4822, 0.4465)
@@ -65,7 +50,6 @@ def get_dataset(args):
         test.targets = [label_map[args.class_order].index(x) for x in test.targets]
 
     elif 'C100-' in dataset_name:
-        DATA_PATH = '~/data'
         args.total_class = 100
         args.class_num = int(args.total_class / args.ntasks)
         args.mean = [x / 255 for x in [129.3, 124.1, 112.4]]
@@ -90,8 +74,8 @@ def get_dataset(args):
         args.mean = (0.4914, 0.4822, 0.4465)
         args.std = (0.2023, 0.1994, 0.2010)
         train_transform, test_transform = get_transform(args)
-        train = datasets.ImageFolder(root='~/data/tiny-imagenet-200/train', transform=train_transform)
-        test = datasets.ImageFolder(root='~/data/tiny-imagenet-200/val', transform=test_transform)
+        train = datasets.ImageFolder(root=f'{DATA_PATH}/tiny-imagenet-200/train', transform=train_transform)
+        test = datasets.ImageFolder(root=f'{DATA_PATH}/data/tiny-imagenet-200/val', transform=test_transform)
         label_map = {
             0: list(range(200)),
             1: [117, 8, 183, 39, 40, 47, 75, 133, 193, 28, 130, 31, 98, 119, 188, 161, 57, 92, 54, 134, 6, 71, 147, 70, 139, 68, 77, 149, 17, 87, 132, 184, 59, 52, 194, 187, 159, 196, 166, 50, 63, 62, 141, 20, 126, 99, 19, 182, 164, 34, 2, 13, 97, 78, 151, 85, 150, 74, 111, 11, 61, 83, 41, 24, 55, 101, 110, 88, 60, 14, 65, 4, 51, 5, 30, 171, 158, 84, 15, 10, 46, 165, 118, 140, 90, 186, 107, 148, 180, 42, 152, 64, 189, 109, 136, 106, 91, 66, 178, 73, 172, 29, 25, 103, 44, 108, 191, 36, 72, 76, 82, 167, 160, 199, 9, 155, 175, 174, 179, 144, 177, 197, 170, 81, 121, 113, 58, 21, 89, 0, 69, 157, 137, 1, 26, 37, 153, 124, 143, 95, 23, 105, 79, 48, 32, 3, 190, 38, 135, 80, 198, 33, 53, 56, 49, 112, 125, 156, 131, 116, 129, 67, 162, 173, 123, 12, 181, 7, 192, 169, 185, 104, 100, 138, 168, 195, 43, 93, 45, 35, 22, 142, 146, 16, 127, 86, 128, 114, 27, 120, 145, 163, 102, 122, 18, 154, 94, 96, 115, 176],
@@ -185,7 +169,7 @@ def get_dataset(args):
         targets_aux, data_aux, full_target_aux, names_aux = [], [], [], []
         idx_aux = []
         # mix replay dataset
-        if t > 0 and 'deit' in args.baseline:
+        if t > 0:
             for c in cls_id_past:
                 idx = np.where(np.array(train.targets) == c)[0][:(args.replay_buffer_size // len(cls_id_past))]
                 if dataset_name.startswith('T-'):

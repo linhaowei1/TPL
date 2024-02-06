@@ -72,8 +72,8 @@ class Appr(object):
 
                     for _, batch in enumerate(test_loader):
                         with torch.no_grad():
-                            features, _ = model.forward_features(task_mask, batch[0], s=self.args.smax)
-                            output = model.forward_classifier(task_mask, features)
+                            features, _ = model.forward_features(batch[0], task_mask, s=self.args.smax)
+                            output = model.forward_classifier(features, task_mask)
                             output = output[:, task_mask * self.args.class_num: (task_mask+1) * self.args.class_num]
                             score, prediction = torch.max(torch.softmax(output, dim=1), dim=1)
 
@@ -94,21 +94,21 @@ class Appr(object):
                     
                 for _, batch in enumerate(train_loader):
                     with torch.no_grad():
-                        features, _ = model.forward_features(eval_t, batch[0], s=self.args.smax)
-                        output = model.forward_classifier(eval_t, features)
+                        features, _ = model.forward_features(batch[0], eval_t, s=self.args.smax)
+                        output = model.forward_classifier(features, eval_t)
                         output = output[:, eval_t * self.args.class_num: (eval_t+1) * self.args.class_num]
                         train_logits[eval_t] += output.cpu().numpy().tolist()
                         train_hidden[eval_t] += (features).cpu().numpy().tolist()
                         train_labels[eval_t] += (batch[1] - self.args.class_num * eval_t).cpu().numpy().tolist()
 
-            with open(os.path.join(self.args.output_dir, 'results'), 'w') as f:
-                json.dump(results, f)
-            with open(os.path.join(self.args.output_dir, 'train_hidden'), 'w') as f:
-                json.dump(train_hidden, f)
-            with open(os.path.join(self.args.output_dir, 'train_labels'), 'w') as f:
-                json.dump(train_labels, f)
-            with open(os.path.join(self.args.output_dir, 'train_logits'), 'w') as f:
-                json.dump(train_logits, f)
+            # with open(os.path.join(self.args.output_dir, 'results'), 'w') as f:
+            #     json.dump(results, f)
+            # with open(os.path.join(self.args.output_dir, 'train_hidden'), 'w') as f:
+            #     json.dump(train_hidden, f)
+            # with open(os.path.join(self.args.output_dir, 'train_labels'), 'w') as f:
+            #     json.dump(train_labels, f)
+            # with open(os.path.join(self.args.output_dir, 'train_logits'), 'w') as f:
+            #     json.dump(train_logits, f)
 
         out_features = {task_mask: [] for task_mask in range(self.args.task + 1)}
         in_features = {task_mask: [] for task_mask in range(self.args.task + 1)}
@@ -121,12 +121,12 @@ class Appr(object):
             with torch.no_grad():
                 for task_mask in range(self.args.task + 1):
                     if idx == task_mask: 
-                        features, _ = model.forward_features(task_mask, batch[0], s=self.args.smax)
+                        features, _ = model.forward_features(batch[0], task_mask, s=self.args.smax)
                         in_features[task_mask] += (features).cpu().numpy().tolist()
                     else:
-                        features, _ = model.forward_features(task_mask, batch[0], s=self.args.smax)
+                        features, _ = model.forward_features(batch[0], task_mask, s=self.args.smax)
                         out_features[task_mask] += (features).cpu().numpy().tolist()
-                    logits = model.forward_classifier(task_mask, features)[:, task_mask * self.args.class_num: (task_mask+1) * self.args.class_num]
+                    logits = model.forward_classifier(features, task_mask)[:, task_mask * self.args.class_num: (task_mask+1) * self.args.class_num]
                     features_dict[task_mask] += features.cpu().numpy().tolist()
                     logits_dict[task_mask] += logits.cpu().numpy().tolist()
 

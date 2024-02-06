@@ -25,8 +25,6 @@ class Appr(object):
 
         # Optimizer
         # Split weights in two groups, one with weight decay and the other not.
-        scheduler = None
-
         optimizer = SGD(model.adapter_parameters(), lr=self.args.learning_rate,
                         momentum=0.9, weight_decay=5e-4, nesterov=True)
         # Scheduler and math around the number of training steps.
@@ -37,8 +35,14 @@ class Appr(object):
             self.args.num_train_epochs = math.ceil(self.args.max_train_steps / num_update_steps_per_epoch)
 
         model = model.cuda()
+        if 'derpp' in self.args.baseline:
+            self.args.teacher_model = self.args.teacher_model.cuda()
+            for p in self.args.teacher_model.parameters():
+                p.requires_grad = False
+        
         if replay_loader is not None:
             replay_iterator = iter(replay_loader)
+
         before_train.prepare(self.args, model)
 
         # Train!
@@ -75,18 +79,34 @@ class Appr(object):
 
                 batch[0] = batch[0].cuda()
                 batch[1] = batch[1].cuda()
-                features, masks = model.forward_features(self.args.task, batch[0], s=s)
-                outputs = model.forward_classifier(self.args.task, features)
+
+                if 'hat' in self.args.baseline:
+                    features, masks = model.forward_features(batch[0], self.args.task, s=s)
+                    outputs = model.forward_classifier(features, self.args.task)
+                else:
+                    features = model.forward_features(batch[0])
+                    outputs = model.forward_classifier(features)[..., :(self.args.task+1) * self.args.class_num]
+                
                 loss = nn.functional.cross_entropy(outputs, batch[1])
 
-                loss += HAT_reg(self.args, masks)
+                if 'hat' in self.args.baseline:
+                    loss += HAT_reg(self.args, masks)
+                elif 'derpp' in self.args.baseline and replay_loader is not None:
+                    with torch.no_grad():
+                        prev_feature = self.args.teacher_model.forward_features(replay_batch[0].cuda())
+                    loss += nn.functional.mse_loss(features[-prev_feature.shape[0]:, ...], prev_feature)
 
                 loss.backward()
 
                 if step % self.args.gradient_accumulation_steps == 0 or step == len(train_loader) - 1:
-                    compensation(model, self.args, thres_cosh=self.args.thres_cosh, s=s)
-                    optimizer.step(hat=(self.args.task > 0))
-                    compensation_clamp(model, thres_emb=6)
+                    
+                    if 'hat' in self.args.baseline:
+                        compensation(model, self.args, thres_cosh=self.args.thres_cosh, s=s)
+                        optimizer.step(hat=(self.args.task > 0))
+                        compensation_clamp(model, thres_emb=6)
+
+                    else:
+                        optimizer.step()
 
                     optimizer.zero_grad()
                     progress_bar.update(1)
@@ -94,20 +114,66 @@ class Appr(object):
                     progress_bar.set_description(
                         'Train Iter (Epoch=%3d,loss=%5.3f)' % ((epoch, loss.item())))  # show the loss, mean while
             
-            if scheduler is not None:
-                scheduler.step()
             if completed_steps >= self.args.max_train_steps:
                 break
-
+        
         after_train.compute(self.args, model)
 
         for eval_t in range(self.args.task + 1):
-            results = self.eval_cl(model, test_loaders, eval_t)
+            if 'hat' in self.args.baseline:
+                results = self.eval_hat(model, test_loaders, eval_t)
+            else:
+                results = self.eval_cil(model, test_loaders, eval_t)
+            
             print("*task {}, til_acc = {}, cil_acc = {}, tp_acc = {}".format(
                 eval_t, results['til_accuracy'], results['cil_accuracy'], results['TP_accuracy']))
             utils.write_result(results, eval_t, self.args)
 
-    def eval_cl(self, model, test_loaders, eval_t):
+    def eval_cil(self, model, test_loaders, eval_t):
+        model.eval()
+        dataloader = test_loaders[eval_t]
+        label_list = []
+        cil_prediction_list, til_prediction_list = [], []
+        total_num = 0
+
+        for _, batch in enumerate(dataloader):
+            with torch.no_grad():
+                
+                features = model.forward_features(batch[0].cuda())
+                logits = model.forward_classifier(features)
+                cil_outputs = logits[..., : (self.args.task + 1) * self.args.class_num]
+                til_outputs = logits[..., eval_t * self.args.class_num: (eval_t+1) * self.args.class_num]
+                _, cil_prediction = torch.max(torch.softmax(cil_outputs, dim=1), dim=1)
+                _, til_prediction = torch.max(torch.softmax(til_outputs, dim=1), dim=1)
+                til_prediction += eval_t * self.args.class_num
+                
+                references = batch[1]
+                total_num += batch[0].shape[0]
+
+                label_list += references.cpu().numpy().tolist()
+                cil_prediction_list += cil_prediction.cpu().numpy().tolist()
+                til_prediction_list += til_prediction.cpu().numpy().tolist()
+
+        cil_accuracy = sum(
+            [1 if label_list[i] == cil_prediction_list[i] else 0 for i in range(total_num)]
+        ) / total_num
+
+        til_accuracy = sum(
+            [1 if label_list[i] == til_prediction_list[i] else 0 for i in range(total_num)]
+        ) / total_num
+
+        tp_accuracy = sum(
+            [1 if cil_prediction_list[i] // self.args.class_num == eval_t else 0 for i in range(total_num)]
+        ) / total_num
+    
+        results = {
+            'til_accuracy': round(til_accuracy, 4),
+            'cil_accuracy': round(cil_accuracy, 4),
+            'TP_accuracy': round(tp_accuracy, 4)
+        }
+        return results
+
+    def eval_hat(self, model, test_loaders, eval_t):
 
         model.eval()
         dataloader = test_loaders[eval_t]
@@ -122,9 +188,9 @@ class Appr(object):
             task_label = []
             for _, batch in enumerate(dataloader):
                 with torch.no_grad():
-
-                    features, _ = model.forward_features(task_mask, batch[0].cuda(), s=self.args.smax)
-                    outputs = model.forward_classifier(task_mask, features)[
+                    
+                    features, _ = model.forward_features(batch[0].cuda(), task_mask, s=self.args.smax)
+                    outputs = model.forward_classifier(features, task_mask)[
                         :, task_mask * self.args.class_num: (task_mask+1) * self.args.class_num]
                     score, prediction = torch.max(torch.softmax(outputs, dim=1), dim=1)
 

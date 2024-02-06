@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 import numpy as np
 import torch
 import sklearn.covariance
@@ -7,17 +8,6 @@ import json
 import faiss
 import torch.nn.functional as F
 from tqdm.auto import tqdm
-from torch.utils.tensorboard import SummaryWriter
-
-
-def init_writer(name):
-    writer = SummaryWriter(name)
-    return writer
-
-
-def log(writer, loss_name='training loss', scalar_value=None, global_step=None):
-    # ...log the running loss
-    writer.add_scalar(loss_name, scalar_value, global_step=global_step)
 
 
 def normalize(v):
@@ -172,12 +162,12 @@ def prepare_sequence_train(args):
     return args
 
 
-def load_deit_pretrain(args, target_model):
+def load_in661_pretrain(args, target_model):
     """
         target_model: the model we want to replace the parameters (most likely un-trained)
     """
-    if os.path.isfile('./deit_pretrained/best_checkpoint.pth'):
-        checkpoint = torch.load('./deit_pretrained/best_checkpoint.pth', map_location='cpu')
+    if os.path.isfile(f'{args.base_dir}/deit_in661/best_checkpoint.pth'):
+        checkpoint = torch.load(f'{args.base_dir}/deit_in661/best_checkpoint.pth', map_location='cpu')
     else:
         raise NotImplementedError("Cannot find pre-trained model")
     target = target_model.state_dict()
@@ -189,19 +179,47 @@ def load_deit_pretrain(args, target_model):
 
 def lookfor_model(args):
 
-    from networks.vit_hat import deit_small_patch16_224
-    model = deit_small_patch16_224(pretrained=False, num_classes=args.class_num *
-                                   args.ntasks, latent=args.latent, args=args)
-    load_deit_pretrain(args, model)
-    for _ in range(args.task):
-        model.append_embeddings()
+    ## load visual encoder ##
+    if 'deit_small_patch16_224' in args.visual_encoder:
+        from networks.vit_hat import deit_small_patch16_224
+        model = deit_small_patch16_224(pretrained=False, num_classes=args.class_num *
+                                    args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
+    elif 'vit_small_patch16_224' in args.visual_encoder:
+        from networks.vit_hat import vit_small_patch16_224
+        model = vit_small_patch16_224(pretrained=False, num_classes=args.class_num *
+                                    args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
+    elif 'vit_base_patch16_224' in args.visual_encoder:
+        from networks.vit_hat import vit_base_patch16_224
+        model = vit_base_patch16_224(pretrained=False, num_classes=args.class_num *
+                                    args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
+    else:
+        raise NotImplementedError
+    
+    checkpoint = torch.load(f'{args.base_dir}/pretrained/{args.visual_encoder}.pth', map_location='cpu')
+    target = model.state_dict()
+    transfer = {k: v for k, v in checkpoint.items() if k in target and 'head' not in k}
+    target.update(transfer)
+    model.load_state_dict(target)
+    
 
-    if not args.training:
-        model.append_embeddings()
-    if args.task > 0:
-        model.load_state_dict(torch.load(os.path.join(args.model_name_or_path), map_location='cpu'))
-    if args.training:
-        model.append_embeddings()
+    ## load adapter or hat mask##
+    if 'hat' in args.baseline:
+        for _ in range(args.task):
+            model.append_embeddings()
+
+        if not args.training:   # inference for the t-th task
+            model.append_embeddings()
+        
+        if args.task > 0:       # load the trained weights
+            model.load_state_dict(torch.load(os.path.join(args.model_name_or_path), map_location='cpu'))
+        
+        if args.training:       # training for the t-th task
+            model.append_embeddings()
+
+    if 'derpp' in args.baseline:
+        if args.task > 0:
+            model.load_state_dict(torch.load(os.path.join(args.model_name_or_path), map_location='cpu'))
+        args.teacher_model = deepcopy(model)    # used for get representation for replay sample
 
     return model
 

@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument('--training', action='store_true')
     parser.add_argument('--calibration', action='store_true')
     parser.add_argument('--scaling', action='store_true')
+    parser.add_argument('--visual_encoder', type=str, default='deit_small_patch16_224_in661')
     parser.add_argument('--class_order', type=int, default=0)
     parser.add_argument('--base_dir', type=str, default='~/data')
     parser.add_argument("--sequence_file", type=str, help="sequence file")
