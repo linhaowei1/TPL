@@ -75,14 +75,14 @@ If you have any questions related to the code or the paper, feel free to email [
 
 ## Acknowledgements
 
-We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an extendable framework for continual learning. We use their code structure as a reference when developing this code base.
+We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an extensible framework for continual learning. We use their code structure as a reference when developing this code base.
 
 ## Citation
 
 Please cite our paper if you use this code or part of it in your work:
 
 ```bibtex
-@inproceedings{lin2023class,
+@inproceedings{lin2024class,
       title={Class Incremental Learning via Likelihood Ratio Based Task Prediction}, 
       author={Haowei Lin and Yijia Shao and Weinan Qian and Ningxin Pan and Yiduo Guo and Bing Liu},
       year={2024},
