@@ -2,7 +2,7 @@
 
 This repository contains the code for our ICLR2024 paper [Class Incremental Learning via Likelihood Ratio Based Task Prediction](https://arxiv.org/abs/2309.15048) by [Haowei Lin](https://linhaowei1.github.io/), [Yijia Shao](https://shaoyijia.github.io/), Weinan Qian, Ningxin Pan, Yiduo Guo, and [Bing Liu](https://www.cs.uic.edu/~liub/).
 
-**Update [2024.2.10]: Now we support running DER++ and more pre-trained visual encoders!**
+**Update [2024.2.10]: Now we support DER++ and more pre-trained visual encoders!**
 
 ## Quick Links
 
