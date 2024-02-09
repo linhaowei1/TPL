@@ -2,25 +2,26 @@
 
 This repository contains the code for our ICLR2024 paper [Class Incremental Learning via Likelihood Ratio Based Task Prediction](https://arxiv.org/abs/2309.15048) by [Haowei Lin](https://linhaowei1.github.io/), [Yijia Shao](https://shaoyijia.github.io/), Weinan Qian, Ningxin Pan, Yiduo Guo, and [Bing Liu](https://www.cs.uic.edu/~liub/).
 
+**Update [2024.2.10]: Now we support running DER++ and more pre-trained visual encoders!**
+
 ## Quick Links
 
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Training](#training)
 - [Evaluation](#evaluation)
+- [Extension](#extension)
 - [Bugs or Questions?](#bugs-or-questions)
 - [Acknowledgements](acknowledgements#)
 - [Citation](#citation)
 
 ## Overview
 
-![](figures/TPLR.png)
-
-Predicting the task-id for each test sample is a challenging problem in CIL. An emerging theoretically justified and effective approach is to train a task-specific model for each task in a shared network for all tasks based on a *task-incremental learning* (TIL) method to deal with forgetting. The model for each task in this approach is an OOD detector rather than a conventional classifier. The OOD detector can perform both *within-task* (*in-distribution* (IND)) class prediction and OOD detection. The OOD detection capability is the key for task-id prediction during inference for each test sample. However, we argue that using a traditional OOD detector for task-id prediction is sub-optimal because additional information (e.g., the replay data and the learned tasks) available in CIL can be exploited to design a better and **principled method for task-id prediction**. We call the new method **TPLR** (***T***ask-id ***P***rediction based on ***L***ikelihood ***R***atio).
+![](figures/TPL.png)
 
 ## Requirements
 
-First, install PyTorch by following the instructions from [the official website](https://pytorch.org/). Please use the correct 1.6.0 version corresponding to your platforms/CUDA versions to faithfully reproduce our results. PyTorch version higher than `1.6.0` should also work. For example, if you use Linux and **CUDA11** ([how to check CUDA version](https://varhowto.com/check-cuda-version/)), install PyTorch by the following command,
+First, install PyTorch by following the instructions from [the official website](https://pytorch.org/). We run the experiments on Pytorch 2.0.1, and PyTorch version higher than `1.6.0` should also work. For example, if you use Linux and **CUDA11** ([how to check CUDA version](https://varhowto.com/check-cuda-version/)), install PyTorch by the following command,
 
 ```
 pip install torch==1.6.0+cu110 -f https://download.pytorch.org/whl/torch_stable.html
@@ -42,7 +43,7 @@ pip install -r requirements.txt
 
 ## Training
 
-In the following section, we describe how to train the TPLR model by using our code.
+In the following section, we describe how to train the TPL model by using our code.
 
 **Data**
 
@@ -50,27 +51,23 @@ Before training and evaluation, please download the datasets (CIFAR-10, CIFAR-10
 
 **Pre-train Model**
 
-We use the pre-train DeiT model provided by [MORE](https://github.com/k-gyuhak/MORE). Please download it and save the file as ``./deit_pretrained/best_checkpoint.pth``
+We use the pre-train DeiT model provided by [MORE](https://github.com/k-gyuhak/MORE). Please download it and save the file as ``./ckpt/pretrained/deit_small_patch16_224_in661.pth``. If you would like to test other pre-trained visual encoders, also download to the same place (you can find the pre-trained weights in timm or huggingface). We provide the scripts for Dino, MAE, CILP, ViT (small, tiny), DeiT (small, tiny).
 
 **Training scripts**
 
-We provide all the example training scripts to run TPLR. e.g., for C10-5T, train the network using this command:
+We provide the examplar training and evaluation script as `deit_small_in661.sh`. Just run the following command and you will get the results:
 
 ```bash
-bash scripts/deit_C10_5T.sh
+bash scripts/deit_small_in661.sh
 ```
 
-For the results in the paper, we use Nvidia GeForce RTX2080Ti GPUs with CUDA 10.2. Using different types of devices or different versions of CUDA/other software may lead to slightly different performance.
+This script performs both training and testing. The default training will train TPL for 5 random seeds. In training, the results will be logged in `ckpt` and the training results are $HAT_{CIL}$ without using TPLR inference techniques. After running evaluation, it will be replaced with new results. If you find you get a bad results, try to check if you run the `eval.py` accurately. The results for the first run with `seed=2023` will be saved in `./ckpt/seq0/seed2023/progressive_main_2023`.
 
-## Evaluation
+For the results in the paper, we use Nvidia A100 GPUs with CUDA 11.7. Using different types of devices or different versions of CUDA/other software may lead to slightly different performance.
 
-Continue with the C10-5T example. Once you finished training, come back to the root directory and simply run this command:
+## Extension
 
-```bash
-bash scripts/deit_C10_5T_eval.sh
-```
-
-The results for the first sequence with `seed=2023` will be saved in `./data/seq0/seed2023/progressive_main_2023`.
+Our repo also supports running baselines like DER++. If you are interested in other baselines, just follow the same way of DER++ to integrate your new code. Also, if you want to test TIL+OOD methods, you can just modify the inference code and include the OOD score computation in `baseline.py`. Our code base is vey extensible.
 
 ## Bugs or questions?
 
@@ -85,12 +82,10 @@ We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an
 Please cite our paper if you use this code or part of it in your work:
 
 ```bibtex
-@misc{lin2023class,
+@inproceedings{lin2023class,
       title={Class Incremental Learning via Likelihood Ratio Based Task Prediction}, 
       author={Haowei Lin and Yijia Shao and Weinan Qian and Ningxin Pan and Yiduo Guo and Bing Liu},
-      year={2023},
-      eprint={2309.15048},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
+      year={2024},
+      booktitle={International Conference on Learning Representations}
 }
 ```
