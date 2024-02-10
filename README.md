@@ -9,7 +9,6 @@ This repository contains the code for our ICLR2024 paper [Class Incremental Lear
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Training](#training)
-- [Evaluation](#evaluation)
 - [Extension](#extension)
 - [Bugs or Questions?](#bugs-or-questions)
 - [Acknowledgements](acknowledgements#)
