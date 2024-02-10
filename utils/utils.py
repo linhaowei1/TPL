@@ -192,6 +192,14 @@ def lookfor_model(args):
         from networks.vit_hat import vit_base_patch16_224
         model = vit_base_patch16_224(pretrained=False, num_classes=args.class_num *
                                     args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
+    elif 'vit_tiny_patch16' in args.visual_encoder:
+        from networks.vit_hat import vit_tiny_patch16_224
+        model = vit_tiny_patch16_224(pretrained=False, num_classes=args.class_num *
+                                    args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
+    elif 'deit_tiny_patch16' in args.visual_encoder:
+        from networks.vit_hat import deit_tiny_patch16_224
+        model = deit_tiny_patch16_224(pretrained=False, num_classes=args.class_num *
+                                    args.ntasks, latent=args.latent, args=args, hat='hat' in args.baseline)
     else:
         raise NotImplementedError
     

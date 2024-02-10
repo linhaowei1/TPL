@@ -10,11 +10,11 @@ final_task=(4 9 19 4 9)
 latent=(64 128 128 128 128)
 buffersize=(200 2000 2000 2000 2000)
 
-for round in 0;
+for round in 0 1 2 3 4;
 do
   for class_order in 0;
   do
-    for i in "${!bs[@]}";
+    for i in $(seq 0 4);
     do
         for ft_task in $(seq 0 ${final_task[$i]});
         do
@@ -34,7 +34,7 @@ do
             --replay_buffer_size ${buffersize[$i]} \
             --training
         done
-        for ft_task in $(seq ${final_task[$i]} ${final_task[$i]});
+        for ft_task in $(seq 0 ${final_task[$i]});
         do
             CUDA_VISIBLE_DEVICES=$cuda_id python eval.py \
             --task ${ft_task} \

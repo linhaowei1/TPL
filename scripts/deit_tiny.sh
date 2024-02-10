@@ -1,7 +1,7 @@
 seed=(2023 111 222 333 444 555 666 777 888 999)
-cuda_id=5
-ve="vit_small_patch16_224.dino"
-bs=('vit_small_patch16_224.dino_C10_5T_hat' 'vit_small_patch16_224.dino_C100_10T_hat' 'vit_small_patch16_224.dino_C100_20T_hat' 'vit_small_patch16_224.dino_T_5T_hat' 'vit_small_patch16_224.dino_T_10T_hat')
+cuda_id=4
+ve="deit_tiny_patch16_224"
+bs=('deit_tiny_patch16_224_C10_5T_hat' 'deit_tiny_patch16_224_C100_10T_hat' 'deit_tiny_patch16_224_C100_20T_hat' 'deit_tiny_patch16_224_T_5T_hat' 'deit_tiny_patch16_224_T_10T_hat')
 seqfile=('C10_5T' 'C100_10T' 'C100_20T' 'T_5T' 'T_10T')
 learning_rate=(0.005 0.001 0.005 0.005 0.005)
 num_train_epochs=(20 40 40 15 10)
@@ -14,7 +14,7 @@ for round in 0 1 2 3 4;
 do
   for class_order in 0;
   do
-    for i in "${!bs[@]}";
+    for i in $(seq 0 4);
     do
         for ft_task in $(seq 0 ${final_task[$i]});
         do
