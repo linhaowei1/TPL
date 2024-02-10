@@ -2,14 +2,13 @@
 
 This repository contains the code for our ICLR2024 paper [Class Incremental Learning via Likelihood Ratio Based Task Prediction](https://arxiv.org/abs/2309.15048) by [Haowei Lin](https://linhaowei1.github.io/), [Yijia Shao](https://shaoyijia.github.io/), Weinan Qian, Ningxin Pan, Yiduo Guo, and [Bing Liu](https://www.cs.uic.edu/~liub/).
 
-**Update [2024.2.10]: Now we support running DER++ and more pre-trained visual encoders!**
+**Update [2024.2.10]: Now we support DER++, Non-CL, and more pre-trained visual encoders!**
 
 ## Quick Links
 
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Training](#training)
-- [Evaluation](#evaluation)
 - [Extension](#extension)
 - [Bugs or Questions?](#bugs-or-questions)
 - [Acknowledgements](acknowledgements#)
@@ -75,14 +74,14 @@ If you have any questions related to the code or the paper, feel free to email [
 
 ## Acknowledgements
 
-We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an extendable framework for continual learning. We use their code structure as a reference when developing this code base.
+We thank [PyContinual](https://github.com/ZixuanKe/PyContinual) for providing an extensible framework for continual learning. We use their code structure as a reference when developing this code base.
 
 ## Citation
 
 Please cite our paper if you use this code or part of it in your work:
 
 ```bibtex
-@inproceedings{lin2023class,
+@inproceedings{lin2024class,
       title={Class Incremental Learning via Likelihood Ratio Based Task Prediction}, 
       author={Haowei Lin and Yijia Shao and Weinan Qian and Ningxin Pan and Yiduo Guo and Bing Liu},
       year={2024},
