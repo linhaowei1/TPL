@@ -205,6 +205,10 @@ def lookfor_model(args):
     
     checkpoint = torch.load(f'{args.base_dir}/pretrained/{args.visual_encoder}.pth', map_location='cpu')
     target = model.state_dict()
+
+    if 'model' in checkpoint.keys():
+        checkpoint = checkpoint['model']
+
     transfer = {k: v for k, v in checkpoint.items() if k in target and 'head' not in k}
     target.update(transfer)
     model.load_state_dict(target)
