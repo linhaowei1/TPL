@@ -60,7 +60,7 @@ We provide the examplar training and evaluation script as `deit_small_in661.sh`.
 bash scripts/deit_small_in661.sh
 ```
 
-This script performs both training and testing. The default training will train TPL for 5 random seeds. In training, the results will be logged in `ckpt` and the training results are $HAT_{CIL}$ without using TPLR inference techniques. After running evaluation, it will be replaced with new results. If you find you get a bad results, try to check if you run the `eval.py` accurately. The results for the first run with `seed=2023` will be saved in `./ckpt/seq0/seed2023/progressive_main_2023`.
+This script performs both training and testing. The default training will train TPL for 5 random seeds. In training, the results will be logged in `ckpt` and the training results are $HAT_{CIL}$ without using TPL inference techniques. After running evaluation, it will be replaced with new results. If you find you get a bad results, try to check if you run the `eval.py` accurately. The results for the first run with `seed=2023` will be saved in `./ckpt/seq0/seed2023/progressive_main_2023`.
 
 For the results in the paper, we use Nvidia A100 GPUs with CUDA 11.7. Using different types of devices or different versions of CUDA/other software may lead to slightly different performance.
 
